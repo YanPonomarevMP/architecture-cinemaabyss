@@ -96,7 +96,7 @@ class EventResponse(BaseModel):
 
 @app.get("/api/events/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": True}
 
 
 @app.post(
