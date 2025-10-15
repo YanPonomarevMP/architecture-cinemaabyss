@@ -5,7 +5,7 @@ global:
 
 # Image pull secrets
 imagePullSecrets:
-  dockerconfigjson: ewoJImF1dGhzIjogewoJCSJnaGNyLmlvIjogewoJCQkiYXV0aCI6
+  dockerconfigjson: ewogICJhdXRocyI6IHsKICAgICJnaGNyLmlvIjogewogICAgICAiYXV0aCI6ICJXV0Z1VUc5dWIyMWhjbVYyVFZBNloyaHdYMnR5V20xT1MyMDJTR05PTTJkd1ZESklaMWxFWlc1V1lWWXpSbWRWZURKV1ZuVTJiUT09IgogICAgfQogIH0KfQ==
 # Database configuration
 database:
   host: postgres
@@ -33,7 +33,7 @@ database:
 monolith:
   enabled: true
   image:
-    repository: ghcr.io/db-exp/cinemaabysstest/monolith
+    repository: ghcr.io/yanponomarevmp/architecture-cinemaabyss/monolith
     tag: latest
     pullPolicy: Always
   replicas: 1
@@ -53,7 +53,7 @@ monolith:
 proxyService:
   enabled: true
   image:
-    repository: ghcr.io/db-exp/cinemaabysstest/proxy-service
+    repository: ghcr.io/yanponomarevmp/architecture-cinemaabyss/proxy-service
     tag: latest
     pullPolicy: Always
   replicas: 1
@@ -65,15 +65,30 @@ proxyService:
       cpu: 100m
       memory: 128Mi
   service:
-    port: 80
+    port: 8000
     targetPort: 8000
     type: ClusterIP
+  env:
+    proxy:
+      name: PORT
+      value: 8000
+    monolith:
+      name: MONOLITH_URL
+      value: "http://monolith:8080"
+    movies:
+      name: MOVIES_SERVICE_URL
+      value: "http://movies-service:8081"
+    events:
+      name: EVENTS_SERVICE_URL
+      value: "http://events-service:8082"
+    gradual_migration: "true"
+    movies_migration_percent: "50"
 
 # Movies service configuration
 moviesService:
   enabled: true
   image:
-    repository: ghcr.io/db-exp/cinemaabysstest/movies-service
+    repository: ghcr.io/yanponomarevmp/architecture-cinemaabyss/movies-service
     tag: latest
     pullPolicy: Always
   replicas: 1
@@ -93,7 +108,7 @@ moviesService:
 eventsService:
   enabled: true
   image:
-    repository: ghcr.io/db-exp/cinemaabysstest/events-service
+    repository: ghcr.io/yanponomarevmp/architecture-cinemaabyss/events-service
     tag: latest
     pullPolicy: Always
   replicas: 1
@@ -108,6 +123,12 @@ eventsService:
     port: 8082
     targetPort: 8082
     type: ClusterIP
+
+  env:
+    events:
+      name: PORT
+      value: 8082
+    kafka_brokers: "kafka:9092"
 
 # Kafka configuration
 kafka:
@@ -169,10 +190,34 @@ ingress:
   hosts:
     - host: cinemaabyss.example.com
       paths:
-        - path: /
+        - path: /api/users
           pathType: Prefix
-          service: proxy-service
-          port: 80
+          service: monolith
+          port: 8080
+        - path: /api/movies
+          pathType: Prefix
+          service: monolith
+          port: 8080
+        - path: /health
+          pathType: Prefix
+          service: monolith
+          port: 8080
+        - path: /api/movies/health
+          pathType: Prefix
+          service: movies-service
+          port: 8081
+        - path: /api/events/health
+          pathType: Prefix
+          service: events-service
+          port: 8082
+        - path: /api/payments
+          pathType: Prefix
+          service: monolith
+          port: 8080
+        - path: /api/subscriptions
+          pathType: Prefix
+          service: monolith
+          port: 8080
         - path: /api/events
           pathType: Prefix
           service: events-service

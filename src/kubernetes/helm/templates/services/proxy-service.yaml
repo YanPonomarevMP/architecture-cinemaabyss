@@ -25,7 +25,50 @@ spec:
     spec:
       containers:
       - name: proxy-service
-        ..... тут
+        image: {{ .Values.proxyService.image.repository }}:{{ .Values.proxyService.image.tag }}
+        imagePullPolicy: {{ .Values.proxyService.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.proxyService.service.targetPort }}
+        env:
+        - name: {{ .Values.proxyService.env.proxy.name }}
+          value: "{{ .Values.proxyService.env.proxy.value }}"
+        - name: {{ .Values.proxyService.env.monolith.name }}
+          value: "{{ .Values.proxyService.env.monolith.value }}"
+        - name: {{ .Values.proxyService.env.movies.name }}
+          value: "{{ .Values.proxyService.env.movies.value }}"
+        - name: {{ .Values.proxyService.env.events.name }}
+          value: "{{ .Values.proxyService.env.events.value }}"
+        - name: GRADUAL_MIGRATION
+          value: "{{ .Values.proxyService.env.gradual_migration }}"
+        - name: MOVIES_MIGRATION_PERCENT
+          value: "{{ .Values.proxyService.env.movies_migration_percent }}"
+        envFrom:
+        - configMapRef:
+            name: cinemaabyss-config
+        - secretRef:
+            name: cinemaabyss-secrets
+        resources:
+          limits:
+            cpu: {{ .Values.proxyService.resources.limits.cpu }}
+            memory: {{ .Values.proxyService.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.proxyService.resources.requests.cpu }}
+            memory: {{ .Values.proxyService.resources.requests.memory }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: dockerconfigjson
 ---
 apiVersion: v1
 kind: Service
@@ -38,5 +81,9 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   selector:
-    ... и тут
+    app: proxy-service
+  ports:
+  - port: {{ .Values.proxyService.service.port }}
+    targetPort: {{ .Values.proxyService.service.targetPort }}
+  type: {{ .Values.proxyService.service.type }}
 {{- end }}

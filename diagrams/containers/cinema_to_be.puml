@@ -1,0 +1,56 @@
+@startuml
+!include <C4/C4_Container>
+
+Person(user, "Пользователь")
+Person(admin, "Сотрудник")
+
+System_Ext(storage, "S3 Хранилище", "Хранение файлов фильмов, звуковых дорожек, стримов")
+System_Ext(communication_channel, "Канал коммуникации", "SMTP-сервер, SMS-сервер")
+System_Ext(fiscal_authority, "Фискальный орган")
+System_Ext(acquiring, "Интернет эквайринг")
+
+Boundary(CINEMA, "Кинобездна", "Компоненты системы") {
+    ContainerDb(database, "Database", "SQL DB")
+    Container(user_api, "Управление пользователями", "Регистрация, раздача прав и т.д.")
+    Container(movies_api, "Управление контентом", "CRUD операции, стриминг HLS, MPEG_DASH etc, DRM-менеджмент")
+    Container(billing_api, "Биллинг", "Покупки, рекурренты, скидки")
+    Container(noty_api, "Нотификации", "Уведомления пользователей, отчёты о доставке")
+    Container(data_bus, "Шина данных", "Брокер сообщений, регистрация событий, хранение состояний")
+    Container(api_gateway, "API GATEWAY")
+    Container(ugc, "UGC", "Реакции, отзывы итд")
+
+    Rel_D(user, api_gateway, "просмотры, покупки, регистрация и тд")
+    Rel_D(admin, api_gateway, "Управление контентом, поддержка и тд")
+
+    Rel_D(api_gateway, movies_api, "управление контентом")
+    Rel_D(movies_api, database, "Чтение/Запись")
+    Rel_D(movies_api, data_bus, "чтение/запись событий")
+
+    Rel_D(api_gateway, user_api, "регистрация, авторизация и т.д.")
+    Rel_D(api_gateway, billing_api, "Покупка")
+    Rel_D(api_gateway, ugc, "Получение и отправка пользовательского контента")
+    Rel_D(ugc, data_bus, "Запись событий")
+
+    Rel_D(user_api, database, "Чтение/Запись")
+    Rel_D(user_api, data_bus, "чтение/запись событий")
+
+    Rel_D(billing_api, database, "Чтение/Запись")
+    Rel(billing_api, data_bus, "чтение/запись событий")
+
+
+    Rel_D(noty_api, database, "Чтение/Запись")
+
+    Rel_D(api_gateway, billing_api, "создание промоакций, управление тарифами")
+    Rel_D(api_gateway, noty_api, "создание шаблонов писем")
+
+
+    Rel_D(data_bus, noty_api, "асинхронная нотификация пользователю")
+    Rel_D(data_bus, database, "сохранение пользовательского контента")
+}
+
+
+Rel(movies_api, storage, "CRUD операции с контентом")
+Rel(billing_api, acquiring, "Проведение платежей")
+Rel(billing_api, fiscal_authority, "Фискализация")
+Rel(noty_api, communication_channel, "Отправка пуш уведомлений")
+@enduml
